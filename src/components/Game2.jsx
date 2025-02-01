@@ -62,7 +62,7 @@ const Game2 = () => {
 
         const raindropInterval = setInterval(() => {
             createRaindrop();
-        }, 1000);
+        }, 500);
 
         return () => clearInterval(raindropInterval);
     }, [gameStarted, timeLeft]);

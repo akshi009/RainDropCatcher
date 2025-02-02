@@ -17,7 +17,6 @@ const Game2 = () => {
         setRaindrops(prev => [...prev, newRaindrop]);
     }, []);
 
-    // Update raindrop positions
     useEffect(() => {
         if (!gameStarted || timeLeft <= 0) return;
 
@@ -35,7 +34,6 @@ const Game2 = () => {
         return () => clearInterval(interval);
     }, [gameStarted, timeLeft]);
 
-    // Handle keyboard input
     useEffect(() => {
         const handleKeyDown = (e) => {
             if (e.key === "ArrowLeft") {
@@ -49,7 +47,6 @@ const Game2 = () => {
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, []);
 
-    // Check collisions and update score
     useEffect(() => {
         if (!gameStarted || timeLeft <= 0) return;
 

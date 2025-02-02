@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 
 const Game2 = () => {
     const [score, setScore] = useState(0);
@@ -8,26 +8,28 @@ const Game2 = () => {
     const [gameStarted, setGameStarted] = useState(false);
     const [timeLeft, setTimeLeft] = useState(30);
 
-    const createRaindrop = useCallback(() => {
+    const createRaindrop = () => {
         const newRaindrop = {
             id: Date.now(),
             x: Math.random() * (window.innerWidth - 100),
             y: 0,
+            hasCaught: false,
         };
-        setRaindrops(prev => [...prev, newRaindrop]);
-    }, []);
+        // console.log("New raindrop created:", newRaindrop);
+        setRaindrops((prev) => [...prev, newRaindrop]);
+    };
 
     useEffect(() => {
         if (!gameStarted || timeLeft <= 0) return;
 
         const interval = setInterval(() => {
-            setRaindrops(prev => 
-                prev
-                    .map(drop => ({
-                        ...drop,
-                        y: drop.y + 5
-                    }))
-                    .filter(drop => drop.y < window.innerHeight) // Remove drops that are off screen
+            setRaindrops((prev) =>
+                prev.map((drop) => {
+                    if (!drop.hasCaught) {
+                        // console.log(`Raindrop ${drop.id} moving down from ${drop.y} to ${drop.y + 5}`);
+                    }
+                    return { ...drop, y: drop.y + 5 };
+                })
             );
         }, 30);
 
@@ -35,11 +37,44 @@ const Game2 = () => {
     }, [gameStarted, timeLeft]);
 
     useEffect(() => {
+        const interval = setInterval(() => {
+            setRaindrops((prev) => prev.filter((drop) => drop.y < window.innerHeight));
+        }, 100);
+
+        return () => clearInterval(interval);
+    }, []);
+
+    const catchRaindrop = (id) => {
+        setRaindrops((prev) =>
+            prev.map((drop) => {
+                if (drop.id === id && !drop.hasCaught) {
+                    // console.log(`Raindrop ${drop.id} caught at position: ${drop.x}, ${drop.y}`);
+                    return { ...drop, hasCaught: true };
+                }
+                return drop;
+            })
+        );
+        setScore((prevScore) => prevScore + 1); // Ensure score update triggers re-render
+    };
+
+    useEffect(() => {
+        if (!gameStarted || timeLeft <= 0) return;
+
+        const raindropInterval = setInterval(() => {
+            createRaindrop();
+        }, 500);
+
+        return () => clearInterval(raindropInterval);
+    }, [gameStarted, timeLeft]);
+
+    useEffect(() => {
         const handleKeyDown = (e) => {
             if (e.key === "ArrowLeft") {
-                setBucketPosition(prev => Math.max(0, prev - 20));
+                setBucketPosition((prev) => Math.max(0, prev - 20)); // Move left
+                // console.log("Bucket moved left:", bucketPosition - 20);
             } else if (e.key === "ArrowRight") {
-                setBucketPosition(prev => Math.min(window.innerWidth - 100, prev + 20));
+                setBucketPosition((prev) => Math.min(window.innerWidth - 100, prev + 20)); // Move right
+                // console.log("Bucket moved right:", bucketPosition + 20);
             }
         };
 
@@ -51,52 +86,40 @@ const Game2 = () => {
         if (!gameStarted || timeLeft <= 0) return;
 
         const checkCollisions = () => {
-            const bucketTop = window.innerHeight - 100;
-            const bucketLeft = bucketPosition;
-            const bucketRight = bucketPosition + 100;
+            raindrops.forEach((drop) => {
+                console.log('drop', drop.hasCaught)
+                if (drop.hasCaught) return;
 
-            setRaindrops(prev => {
-                let scoreIncrement = 0;
-                const updatedDrops = prev.filter(drop => {
-                    const dropBottom = drop.y + 20;
-                    const dropLeft = drop.x;
-                    const dropRight = drop.x + 20;
+                const dropBottom = drop.y + 20; 
+                const dropLeft = drop.x;
+                const dropRight = drop.x + 20;
 
-                    // Check if drop is caught by bucket
-                    if (dropBottom >= bucketTop && 
-                        dropLeft >= bucketLeft && 
-                        dropRight <= bucketRight) {
-                        scoreIncrement++;
-                        return false; // Remove caught drops
-                    }
-                    return true; // Keep uncaught drops
-                });
+                const bucketTop = window.innerHeight - 100;
+                const bucketLeft = bucketPosition;
+                const bucketRight = bucketPosition + 100;
 
-                if (scoreIncrement > 0) {
-                    setScore(s => s + scoreIncrement);
+                (console.log('if above'))
+
+                if (
+                    dropBottom >= bucketTop && 
+                    dropLeft >= bucketLeft && 
+                    dropRight <= bucketRight
+                ) {
+                    console.log(`Collision detected: Raindrop ${drop.id} at (${drop.x}, ${drop.y}) caught in bucket.`);
+                    catchRaindrop(drop.id);
                 }
-                return updatedDrops;
             });
         };
 
-        const collisionInterval = setInterval(checkCollisions, 50);
+        const collisionInterval = setInterval(checkCollisions, 100);
         return () => clearInterval(collisionInterval);
-    }, [bucketPosition, gameStarted, timeLeft]);
+    }, [raindrops, bucketPosition, gameStarted, timeLeft]);
 
-    // Create new raindrops
-    useEffect(() => {
-        if (!gameStarted || timeLeft <= 0) return;
-
-        const interval = setInterval(createRaindrop, 500);
-        return () => clearInterval(interval);
-    }, [gameStarted, timeLeft, createRaindrop]);
-
-    // Game timer
     useEffect(() => {
         if (!gameStarted || timeLeft <= 0) return;
 
         const timer = setInterval(() => {
-            setTimeLeft(prev => prev - 1);
+            setTimeLeft((prev) => prev - 1);
         }, 1000);
 
         return () => clearInterval(timer);
@@ -107,6 +130,7 @@ const Game2 = () => {
         setScore(0);
         setTimeLeft(30);
         setRaindrops([]);
+        console.log("Game started!");
     };
 
     const restartGame = () => {
@@ -115,11 +139,18 @@ const Game2 = () => {
         setTimeLeft(30);
         setRaindrops([]);
         setBucketPosition(window.innerWidth / 2 - 50);
+        console.log("Game restarted!");
     };
 
     return (
-        <section className="relative py-16 h-screen bg-cover bg-green-100 bg-center">
-            <div className="relative z-10 text-center">
+        <section 
+    id="game" 
+    className="relative py-16 h-screen bg-cover bg-green-100 bg-center "
+>
+    {/* Background overlay for opacity */}
+    <div className="absolute inset-0  "></div> 
+
+    <div className="relative z-10  text-center">
                 <h2 className="text-4xl font-bold mb-8">Catch the Raindrop</h2>
 
                 {!gameStarted ? (
@@ -160,9 +191,6 @@ const Game2 = () => {
                             </motion.div>
                         </div>
                         <p className="text-lg mt-4">Use the left and right arrow keys to move the bucket!</p>
-                        {timeLeft <= 0 && (
-                            <p className="text-2xl font-bold mt-4">Game Over! Final Score: {score}</p>
-                        )}
                         <button
                             onClick={restartGame}
                             className="mt-4 px-6 py-3 cursor bg-red-600 text-white rounded-lg font-semibold shadow-lg hover:bg-red-700"

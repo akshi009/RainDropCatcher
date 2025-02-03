@@ -30,6 +30,7 @@ const Game2 = () => {
                 prev.map((drop) => {
                     
                     if (!drop.hasCaught) {
+                        // console.log(`Raindrop ${drop.id} moving down from ${drop.y} to ${drop.y + 5}`);
                         
                     }
                     return { ...drop, y: drop.y + 5 };
